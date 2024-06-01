@@ -1,50 +1,86 @@
-import requests
+from kivy.app import App
 from kivy.uix.screenmanager import Screen
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
-from kivy.uix.spinner import Spinner
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.textinput import TextInput
+from kivy.uix.button import Button
 from kivy.uix.popup import Popup
+from kivy.uix.checkbox import CheckBox
+import requests
 
-class CadastroUsuarioScreen(Screen):
+class CadastroUsuarioLayout(BoxLayout):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super(CadastroUsuarioLayout, self).__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.padding = [100, 50, 100, 50]  # left, top, right, bottom
+        self.spacing = 20
 
-        layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
-        self.add_widget(layout)
+        self.add_widget(Label(text='Nome de usuário:', size_hint_y=None, height=30))
+        self.username = TextInput(multiline=False, size_hint_y=None, height=40)
+        self.add_widget(self.username)
 
-        self.label_usuario = Label(text='Nome de Usuário')
-        self.input_usuario = TextInput()
+        self.add_widget(Label(text='Senha:', size_hint_y=None, height=30))
+        self.password = TextInput(password=True, multiline=False, size_hint_y=None, height=40)
+        self.add_widget(self.password)
 
-        self.label_senha = Label(text='Senha')
-        self.input_senha = TextInput(password=True)
+        self.add_widget(Label(text='Admin:', size_hint_y=None, height=30))
+        self.admin_checkbox = CheckBox(active=False, size_hint_y=None, height=40)
+        self.add_widget(self.admin_checkbox)
 
-        self.label_admin = Label(text='Administrador')
-        self.spinner_admin = Spinner(text='Não', values=['Sim', 'Não'])
+        self.registrar_button = Button(text='Registrar', size_hint_y=None, height=50)
+        self.registrar_button.bind(on_press=self.registrar)
+        self.add_widget(self.registrar_button)
 
-        self.btn_cadastrar = Button(text='Cadastrar')
-        self.btn_cadastrar.bind(on_press=self.cadastrar_usuario)
+        # Adicionando label para acessar a tela de login
+        self.label_login = Label(text='Já tem cadastro? Clique aqui para voltar ao login!',
+                                 color=[0, 0, 1, 1], halign='center', markup=True, size_hint_y=None, height=30)
+        self.label_login.bind(on_touch_down=self.ir_para_login)
+        self.add_widget(self.label_login)
 
-        layout.add_widget(self.label_usuario)
-        layout.add_widget(self.input_usuario)
-        layout.add_widget(self.label_senha)
-        layout.add_widget(self.input_senha)
-        layout.add_widget(self.label_admin)
-        layout.add_widget(self.spinner_admin)
-        layout.add_widget(self.btn_cadastrar)
+    def registrar(self, instance):
+        nome = self.username.text
+        senha = self.password.text
+        admin = int(self.admin_checkbox.active)
 
-    def cadastrar_usuario(self, instance):
-        nome_usuario = self.input_usuario.text
-        senha = self.input_senha.text
-        is_admin = 1 if self.spinner_admin.text == 'Sim' else 0
+        # Verificar se os campos de nome de usuário e senha não estão vazios
+        if not nome or not senha:
+            self.mostrar_popup('Erro', 'Nome de usuário e senha não podem estar vazios!')
+            return
 
-        response = requests.post('http://localhost:5000/cadastro',
-                                 data={'nome_usuario': nome_usuario, 'senha': senha, 'is_admin': is_admin})
-        if response.status_code == 200:
-            self.manager.current = 'lista'
-        else:
-            popup = Popup(title='Erro',
-                          content=Label(text='Erro ao cadastrar usuário!'),
-                          size_hint=(None, None), size=(400, 200))
-            popup.open()
+        try:
+            response = requests.post('http://127.0.0.1:5000/usuarios',
+                                     json={'nome': nome, 'senha': senha, 'admin': admin})
+            if response.status_code == 200:
+                self.mostrar_popup('Sucesso', 'Usuário cadastrado com sucesso!', sucesso=True)
+            else:
+                self.mostrar_popup('Erro', 'Erro ao cadastrar usuário!')
+        except requests.ConnectionError:
+            self.mostrar_popup('Erro', 'Erro ao conectar com o servidor.')
+        except requests.RequestException as e:
+            self.mostrar_popup('Erro', f'Erro ao cadastrar usuário: {str(e)}')
+
+    def mostrar_popup(self, titulo, mensagem, sucesso=False):
+        layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        popup_label = Label(text=mensagem)
+        fechar_button = Button(text='Fechar', size_hint=(None, None), size=(100, 50))
+        layout.add_widget(popup_label)
+        layout.add_widget(fechar_button)
+        popup = Popup(title=titulo, content=layout, size_hint=(None, None), size=(400, 200))
+        fechar_button.bind(on_press=popup.dismiss)
+        if sucesso:
+            popup.bind(on_dismiss=lambda x: self.fechar_popup_e_voltar())
+        popup.open()
+
+    def fechar_popup_e_voltar(self):
+        # Fecha o popup e volta para a tela de login
+        App.get_running_app().root.current = 'realizar_login'
+
+    def ir_para_login(self, instance, touch):
+        if instance.collide_point(*touch.pos):
+            # Redirecionar para a tela de login
+            App.get_running_app().root.current = 'realizar_login'
+
+class TelaCadastroUsuarioScreen(Screen):
+    def __init__(self, **kwargs):
+        super(TelaCadastroUsuarioScreen, self).__init__(**kwargs)
+        self.add_widget(CadastroUsuarioLayout())

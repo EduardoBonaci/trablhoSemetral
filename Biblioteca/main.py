@@ -1,37 +1,43 @@
 import subprocess
-from threading import Thread
+import sys
 
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager
 
+from tela_login import LoginScreenLayout
+from tela_cadastro_usuario import TelaCadastroUsuarioScreen
+from tela_acesso_admin import AcessoAdminScreen
 from tela_cadastro_livros import CadastroLivroScreen
-from tela_cadastro_usuario import CadastroUsuarioScreen
-from tela_login import LoginScreen
-from tela_usuarios import ListaUsuariosScreen
+from tela_ver_livros import VerLivrosScreen
+from tela_usuario import TelaUsuario  # Importação da tela de usuário
 
-class MyApp(App):
+class GerenciadorTela(ScreenManager):
+    def __init__(self, **kwargs):
+        super(GerenciadorTela, self).__init__(**kwargs)
+        self.add_widget(LoginScreenLayout(name='realizar_login'))
+        self.add_widget(TelaCadastroUsuarioScreen(name='cadastrar_usuario'))
+        self.add_widget(AcessoAdminScreen(name='administrador'))
+        self.add_widget(AcessoAdminScreen(name='acesso_admin'))
+
+        self.add_widget(CadastroLivroScreen(name='cadastro_livros'))
+        self.add_widget(VerLivrosScreen(name='ver_livros'))
+        self.add_widget(TelaUsuario(name='tela_usuario'))  # Adicionando a tela de usuário
+
+class MainApp(App):
     def build(self):
-        """Construção da aplicação Kivy."""
-        sm = ScreenManager()
-        sm.add_widget(LoginScreen(name='login'))
-        sm.add_widget(CadastroUsuarioScreen(name='tela_cadastro_usuario'))
-        sm.add_widget(ListaUsuariosScreen(name='lista'))
-        sm.add_widget(CadastroLivroScreen(name='cadastro_livro'))
-        return sm
-
-    def on_start(self):
-        """Inicia o servidor Flask em uma thread separada ao iniciar a aplicação."""
-        Thread(target=self.iniciar_servidor_flask).start()
+        self.iniciar_servidor_flask()
+        return GerenciadorTela()
 
     def iniciar_servidor_flask(self):
-        """Inicia o servidor Flask utilizando subprocess.Popen."""
-        comando = ['python', 'backend.py', 'run', '--host=0.0.0.0']
+        comando = [sys.executable, 'backend.py', 'run', '--host=0.0.0.0']
         try:
             subprocess.Popen(comando)
-        except subprocess.SubprocessError as e:
-            print(f'Erro ao iniciar o servidor Flask: {e}')
+            print('Servidor Flask iniciado com sucesso.')
         except Exception as e:
-            print(f'Ocorreu um erro inesperado ao iniciar o servidor Flask: {e}')
+            print('Erro ao iniciar o servidor Flask:', repr(e))
+
+    def on_stop(self):
+        subprocess.Popen(["pkill", "-f", "backend.py"])  # Encerra o processo do servidor Flask ao fechar o aplicativo
 
 if __name__ == '__main__':
-    MyApp().run()
+    MainApp().run()
