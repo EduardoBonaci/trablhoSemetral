@@ -68,13 +68,10 @@ class AcessoAdminScreen(Screen):
         layout.add_widget(scroll_view)
 
         btn_voltar = Button(text='Voltar', size_hint_y=None, height=40)
-        btn_voltar.bind(on_press=self.voltar_tela_admin)
+        btn_voltar.bind(on_press=self.voltar_para_acesso_admin)
         layout.add_widget(btn_voltar)
 
         self.add_widget(layout)
-    def voltar_tela_admin(self, instance):
-        app = App.get_running_app()
-        app.root.current = 'acesso_admin'
 
     def cadastrar_livros(self, instance):
         app = App.get_running_app()
@@ -117,7 +114,7 @@ class AcessoAdminScreen(Screen):
         layout.add_widget(scroll_view)
 
         btn_voltar = Button(text='Voltar', size_hint_y=None, height=40)
-        btn_voltar.bind(on_press=self.voltar_tela_admin)
+        btn_voltar.bind(on_press=self.voltar_para_acesso_admin)
         layout.add_widget(btn_voltar)
 
         self.add_widget(layout)
@@ -125,6 +122,12 @@ class AcessoAdminScreen(Screen):
     def voltar(self, instance):
         app = App.get_running_app()
         app.root.current = 'realizar_login'
+
+    def voltar_para_acesso_admin(self, instance):
+        self.clear_widgets()
+        self.build_ui()
+        app = App.get_running_app()
+        app.root.current = 'acesso_admin'
 
     def mostrar_popup(self, titulo, mensagem):
         layout = BoxLayout(orientation='vertical', padding=10, spacing=10)

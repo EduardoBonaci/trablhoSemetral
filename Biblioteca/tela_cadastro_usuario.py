@@ -1,4 +1,5 @@
 from kivy.app import App
+from kivy.clock import Clock
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -7,6 +8,7 @@ from kivy.uix.button import Button
 from kivy.uix.popup import Popup
 from kivy.uix.checkbox import CheckBox
 import requests
+
 
 class CadastroUsuarioLayout(BoxLayout):
     def __init__(self, **kwargs):
@@ -27,8 +29,10 @@ class CadastroUsuarioLayout(BoxLayout):
         self.admin_checkbox = CheckBox(active=False, size_hint_y=None, height=40)
         self.add_widget(self.admin_checkbox)
 
+
+
         self.registrar_button = Button(text='Registrar', size_hint_y=None, height=50)
-        self.registrar_button.bind(on_press=self.registrar)
+        self.registrar_button.bind(on_press=self.verificar_e_registrar)
         self.add_widget(self.registrar_button)
 
         # Adicionando label para acessar a tela de login
@@ -37,7 +41,7 @@ class CadastroUsuarioLayout(BoxLayout):
         self.label_login.bind(on_touch_down=self.ir_para_login)
         self.add_widget(self.label_login)
 
-    def registrar(self, instance):
+    def verificar_e_registrar(self, instance):
         nome = self.username.text
         senha = self.password.text
         admin = int(self.admin_checkbox.active)
@@ -48,12 +52,20 @@ class CadastroUsuarioLayout(BoxLayout):
             return
 
         try:
-            response = requests.post('http://127.0.0.1:5000/usuarios',
-                                     json={'nome': nome, 'senha': senha, 'admin': admin})
+            # Verificar se o usuário já existe
+            response = requests.get(f'http://127.0.0.1:5000/usuarios/{nome}')
             if response.status_code == 200:
-                self.mostrar_popup('Sucesso', 'Usuário cadastrado com sucesso!', sucesso=True)
+                self.mostrar_popup('Erro', 'Nome de usuário já existe!')
+            elif response.status_code == 404:
+                # Registrar o usuário
+                response = requests.post('http://127.0.0.1:5000/usuarios',
+                                         json={'nome': nome, 'senha': senha, 'admin': admin})
+                if response.status_code == 200:
+                    self.mostrar_popup('Sucesso', 'Usuário cadastrado com sucesso!', sucesso=True)
+                else:
+                    self.mostrar_popup('Erro', 'Erro ao cadastrar usuário!')
             else:
-                self.mostrar_popup('Erro', 'Erro ao cadastrar usuário!')
+                self.mostrar_popup('Erro', 'Erro ao verificar existência do usuário!')
         except requests.ConnectionError:
             self.mostrar_popup('Erro', 'Erro ao conectar com o servidor.')
         except requests.RequestException as e:
@@ -84,3 +96,16 @@ class TelaCadastroUsuarioScreen(Screen):
     def __init__(self, **kwargs):
         super(TelaCadastroUsuarioScreen, self).__init__(**kwargs)
         self.add_widget(CadastroUsuarioLayout())
+
+    def on_pre_enter(self):
+        # Limpar os campos ao entrar na tela de cadastro de usuário
+        self.clear_inputs()
+
+    def clear_inputs(self):
+        # Encontra todos os TextInput na tela e limpa seus textos
+        for widget in self.children[0].children:  # Acessa o primeiro filho que é o CadastroUsuarioLayout
+            if isinstance(widget, TextInput):
+                widget.text = ''
+            elif isinstance(widget, CheckBox):
+                widget.active = False
+

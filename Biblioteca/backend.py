@@ -67,20 +67,24 @@ def login():
         senha = data['senha']
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT admin FROM usuarios WHERE nome = :1 AND senha = :2", (nome, senha))
+            cursor.execute("SELECT senha, admin FROM usuarios WHERE nome = :1", (nome,))
             result = cursor.fetchone()
 
         if result:
-            admin = result[0]
-            return jsonify({'admin': admin, 'status': 'success'}), 200
+            db_senha, admin = result
+            if db_senha == senha:
+                return jsonify({'admin': admin, 'status': 'success'}), 200
+            else:
+                return jsonify({'error': 'Senha incorreta!', 'status': 'failure'}), 401
         else:
-            return jsonify({'error': 'Usuário ou senha incorretos!', 'status': 'failure'}), 401
+            return jsonify({'error': 'Usuário não encontrado!', 'status': 'failure'}), 404
 
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         return jsonify({'error': str(error), 'status': 'failure'}), 500
     except KeyError as e:
         return jsonify({'error': f'Missing key: {str(e)}', 'status': 'failure'}), 400
+
 
 @app.route('/cadastrar_livro', methods=['POST'])
 def cadastrar_livro():
@@ -124,6 +128,25 @@ def listar_livros():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         return jsonify({'error': str(error)}), 500
+@app.route('/usuarios/<nome>', methods=['GET'])
+def verificar_usuario(nome):
+    if connection is None:
+        return jsonify({'error': 'Falha na conexão com o banco de dados'}), 500
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT nome FROM usuarios WHERE nome = :1", (nome,))
+            result = cursor.fetchone()
+
+        if result:
+            return jsonify({'message': 'Usuário já existe!'}), 200
+        else:
+            return jsonify({'message': 'Usuário disponível!'}), 404
+
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        return jsonify({'error': str(error)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)

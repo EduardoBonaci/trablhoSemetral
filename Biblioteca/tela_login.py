@@ -55,25 +55,39 @@ class LoginScreenLayout(Screen):
                 if data.get('admin') == 1:
                     app.root.current = 'administrador'
                 else:
-                    app.root.current = 'tela_usuario'  # Mudança aqui
+                    app.root.current = 'tela_usuario'
+            elif response.status_code == 404:
+                self.mostrar_popup('Erro', 'Usuário não encontrado!', registrar=True)
+            elif response.status_code == 401:
+                self.mostrar_popup('Erro', 'Senha incorreta!')
             else:
-                self.mostrar_popup('Erro', 'Usuário ou senha incorretos!')
+                self.mostrar_popup('Erro', 'Erro ao realizar login!')
         except requests.ConnectionError:
             self.mostrar_popup('Erro', 'Erro ao conectar com o servidor.')
         except requests.RequestException as e:
             self.mostrar_popup('Erro', f'Erro ao realizar login: {str(e)}')
 
-    def mostrar_popup(self, titulo, mensagem):
+    def mostrar_popup(self, titulo, mensagem, registrar=False):
         # Verifica se a tela atual é a tela de login antes de exibir o popup
         if App.get_running_app().root.current == 'realizar_login':
             layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
             popup_label = Label(text=mensagem)
-            fechar_button = Button(text='Fechar', size_hint=(None, None), size=(100, 50))
             layout.add_widget(popup_label)
-            layout.add_widget(fechar_button)
+
+            buttons_layout = BoxLayout(size_hint_y=None, height=50, spacing=10)
+            fechar_button = Button(text='Fechar', size_hint=(None, None), size=(100, 50))
+            fechar_button.bind(on_press=lambda x: popup.dismiss())
+            buttons_layout.add_widget(fechar_button)
+
+            if registrar:
+                registrar_button = Button(text='Registre-se', size_hint=(None, None), size=(100, 50))
+                registrar_button.bind(on_press=lambda x: self.ir_para_cadastro(popup))
+                buttons_layout.add_widget(registrar_button)
+
+            layout.add_widget(buttons_layout)
+
             popup = Popup(title=titulo, content=layout, size_hint=(None, None), size=(400, 200))
-            fechar_button.bind(on_press=popup.dismiss)
-            popup.bind(on_dismiss=self.popup_dismissed)  # Adiciona evento on_dismiss
+            popup.bind(on_dismiss=self.popup_dismissed)
             popup.open()
 
     def popup_dismissed(self, instance):
@@ -87,3 +101,13 @@ class LoginScreenLayout(Screen):
         if instance.collide_point(*touch.pos):
             app = App.get_running_app()
             app.root.current = 'cadastrar_usuario'
+
+    def ir_para_cadastro(self, popup):
+        popup.dismiss()
+        app = App.get_running_app()
+        app.root.current = 'cadastrar_usuario'
+
+    def on_pre_enter(self):
+        # Limpar os campos de nome de usuário e senha ao entrar na tela
+        self.username.text = ''
+        self.password.text = ''

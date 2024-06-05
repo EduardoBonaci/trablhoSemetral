@@ -5,6 +5,7 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import Screen
 from kivy.uix.textinput import TextInput
+from kivy.app import App
 
 class CadastroLivroScreen(Screen):
     def __init__(self, **kwargs):
@@ -35,6 +36,10 @@ class CadastroLivroScreen(Screen):
         btn_cadastrar = Button(text='Cadastrar Livro', size_hint_y=None, height=30)
         btn_cadastrar.bind(on_press=self.cadastrar_livro)
         layout.add_widget(btn_cadastrar)
+
+        btn_voltar = Button(text='Voltar', size_hint_y=None, height=30)
+        btn_voltar.bind(on_press=self.voltar)
+        layout.add_widget(btn_voltar)
 
         self.add_widget(layout)
 
@@ -79,3 +84,7 @@ class CadastroLivroScreen(Screen):
         popup = Popup(title=titulo, content=layout, size_hint=(None, None), size=(400, 200))
         fechar_button.bind(on_press=popup.dismiss)
         popup.open()
+
+    def voltar(self, instance):
+        app = App.get_running_app()
+        app.root.current = 'acesso_admin'
